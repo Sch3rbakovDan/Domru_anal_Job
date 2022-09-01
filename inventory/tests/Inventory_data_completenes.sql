@@ -1,7 +1,9 @@
-/* Селектим все необходимые поля из обоих подзапросов, т.к. нужно иерархическое заполнение с верхних уровней для корректного заполнения применяем аггрегирующую функцию STRING_AGG*/
+/* Селектим все необходимые поля из обоих подзапросов, т.к. нужно иерархическое заполнение с верхних уровней, 
+то для корректного заполнения применяем аггрегирующую функцию STRING_AGG*/
+
 SELECT dat.segment, dat.domain, rec.id, rec.app_name, max(dat.func_id) AS func_id, max(dat.func_name) AS func_name, 
        string_agg(dat.status,'/ ') AS status, string_agg(dat.rsm_app_name,'/ ') AS rsm_app_name, string_agg(dat.asset,'/ ') AS asset
-FROM /*Рекурсивный подзапрос и JOIN с иерархической таблицей в БД*/
+FROM                                             /*Рекурсивный подзапрос и JOIN с иерархической таблицей в БД*/
     (
     WITH RECURSIVE parnt as
         (
@@ -16,7 +18,7 @@ FROM /*Рекурсивный подзапрос и JOIN с иерархичес
     UNION ALL
     SELECT id, id, name FROM fx_app
     ) rec,
-    ( /*Первая часть подзапроса собирает все applications*/
+    (                                            /*Первая часть подзапроса собирает все applications*/
     SELECT ts.*, fai.status, ea.name AS rsm_app_name, ea.asset
     FROM 
         (
@@ -26,7 +28,7 @@ FROM /*Рекурсивный подзапрос и JOIN с иерархичес
         ) ts
     JOIN fx_app_implementation fai ON fai.fx_app_id = ts.id AND ts.segment = upper(fai.segment)
     JOIN er_app ea ON ea.id = fai.app_id 
-    UNION /*Вторая часть подзапроса собирает все functions*/
+    UNION                                        /*Вторая часть подзапроса собирает все functions*/
     SELECT fas.*, eaf.status, ea.name AS rsm_app_name, ea.asset
     FROM 
         (
@@ -41,6 +43,6 @@ FROM /*Рекурсивный подзапрос и JOIN с иерархичес
     LEFT JOIN er_app_function eaf ON eaf.function_id = fAS.id AND fAS.segment = upper(eaf.segment) 
     LEFT JOIN er_app ea ON ea.id = eaf.app_id
     ) dat 
-WHERE dat.id = rec.parent_app_id /*Связываем оба подзапроса*/
+WHERE dat.id = rec.parent_app_id                  /*Связываем оба подзапроса*/
 GROUP BY dat.segment, dat.domain, rec.id, rec.app_name 
 
